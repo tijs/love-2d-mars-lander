@@ -3,52 +3,14 @@ local Terrain = {}
 Terrain.__index = Terrain
 
 -- Import modules
-local Constants = require("src.entities.terrain.constants")
 local Sky = require("src.entities.terrain.sky")
 local Features = require("src.entities.terrain.features")
 local LandingPad = require("src.entities.terrain.landing_pad")
 local Surface = require("src.entities.terrain.surface")
 local Starfield = require("src.entities.starfield")
 
--- Constants for terrain generation
-local MIN_HEIGHT = 400
-local MAX_HEIGHT = 550
-local SEGMENT_WIDTH = 20
-local LANDING_PAD_WIDTH = 80 -- Increased from 60 to make landing easier
-
--- Enhanced Mars terrain colors
-local TERRAIN_COLORS = {
-    { 0.85, 0.4,  0.25 }, -- Light reddish-orange (surface)
-    { 0.75, 0.35, 0.2 },  -- Medium reddish-brown
-    { 0.65, 0.3,  0.15 }, -- Dark reddish-brown
-    { 0.55, 0.25, 0.12 }, -- Very dark reddish-brown (deep terrain)
-    { 0.9,  0.5,  0.3 }   -- Light orange-red (highlights)
-}
-
--- Sky colors for atmospheric gradient
-local SKY_COLORS = {
-    { 0.8, 0.4,  0.3 }, -- Light orange-red (horizon)
-    { 0.6, 0.25, 0.2 }, -- Medium red (mid sky)
-    { 0.4, 0.15, 0.15 } -- Dark red (upper sky)
-}
-
--- Crater constants
-local CRATER_CHANCE = 0.2       -- Increased chance of craters
-local MIN_CRATER_SIZE = 5
-local MAX_CRATER_SIZE = 20      -- Larger max crater size
-local CRATER_DEPTH_FACTOR = 0.3 -- How deep craters appear
-
--- Rock constants
-local ROCK_CHANCE = 0.15
-local MIN_ROCK_SIZE = 3
-local MAX_ROCK_SIZE = 8
-
--- Dust constants
-local DUST_PARTICLES = 100
-local DUST_SIZE_MIN = 1
-local DUST_SIZE_MAX = 3
-local DUST_SPEED_MIN = 10
-local DUST_SPEED_MAX = 30
+-- Constants are now imported from Constants module
+-- and used directly in the respective modules
 
 ---Creates a new terrain instance
 ---@return table The new terrain instance

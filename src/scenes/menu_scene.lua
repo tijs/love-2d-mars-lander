@@ -181,7 +181,6 @@ function MenuScene:draw()
 
     -- Draw Mars surface
     love.graphics.setColor(MARS_SURFACE_COLOR)
-    local ground_y = love.graphics.getHeight() * 0.75
 
     -- Draw the surface as a polygon
     local vertices = {}

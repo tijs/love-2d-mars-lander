@@ -86,8 +86,7 @@ function Sky.drawSkyGradient(screen_width, screen_height, alpha)
         love.graphics.setColor(r, g, b, alpha * (0.5 + t * 0.5)) -- More transparent at top, more opaque at horizon
 
         local y1 = i * step_height
-        local y2 = (i + 1) * step_height
-
+        -- Draw the rectangle for this gradient step
         love.graphics.rectangle("fill", 0, y1, screen_width, step_height)
     end
 end

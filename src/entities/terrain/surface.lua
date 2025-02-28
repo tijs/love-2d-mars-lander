@@ -9,120 +9,58 @@ local rock_formations = {}
 local color_variations = {}
 local initialized = false
 
----Generates terrain points
----@param screen_width number The screen width
----@return table Generated terrain data
+---Generates a new terrain surface
+---@param screen_width number Width of the screen
+---@return table The generated terrain data
 function Surface.generate(screen_width)
     local points = {}
-    local segments = {}
-    local landing_pad_start = nil
-    local landing_pad_end = nil
-    local landing_pad_height = nil
+    local landing_pad_start, landing_pad_end, landing_pad_height
 
     local num_points = math.ceil(screen_width / Constants.SEGMENT_WIDTH) + 1
 
     -- Choose a random position for the landing pad
-    local landing_pad_segments = math.floor(Constants.LANDING_PAD_WIDTH / Constants.SEGMENT_WIDTH)
-    local landing_pad_start_index = math.random(2, num_points - landing_pad_segments - 1)
-    local landing_pad_end_index = landing_pad_start_index + landing_pad_segments
+    local landing_pad_info = Surface.generateLandingPadInfo(num_points)
+    local landing_pad_start_index = landing_pad_info.start_index
+    local landing_pad_end_index = landing_pad_info.end_index
 
-    -- Generate height for each point with improved terrain variation
+    -- Generate mountain peaks
+    local mountain_peaks = Surface.generateMountainPeaks(num_points, landing_pad_start_index, landing_pad_end_index)
+
+    -- Initialize height tracking
     local prev_height = math.random(Constants.MIN_HEIGHT, Constants.MAX_HEIGHT)
-
-    -- Track the last few heights to create more natural terrain
     local height_history = { prev_height, prev_height, prev_height }
 
-    -- Add more mountain peaks for dramatic landscape
-    local mountain_peaks = {}
-    local num_mountains = math.random(4, 7) -- Increased number of mountains
-    for i = 1, num_mountains do
-        local peak_index = math.random(1, num_points)
-        -- Avoid placing mountains on or near landing pads
-        while peak_index >= landing_pad_start_index - 3 and peak_index <= landing_pad_end_index + 3 do
-            peak_index = math.random(1, num_points)
-        end
-        mountain_peaks[peak_index] = true
-    end
-
+    -- Generate terrain points
     for i = 1, num_points do
         local x = (i - 1) * Constants.SEGMENT_WIDTH
-        local y
+        local point_info = Surface.generateTerrainPoint(
+            i, x, prev_height, height_history,
+            landing_pad_start_index, landing_pad_end_index,
+            mountain_peaks, points
+        )
 
-        -- If this is part of the landing pad, make it flat
-        if i >= landing_pad_start_index and i <= landing_pad_end_index then
-            -- If this is the first point of the landing pad, set a random height
-            if i == landing_pad_start_index then
-                -- Make sure landing pad is in a valley, not too high
-                y = math.random(Constants.MIN_HEIGHT + 50, Constants.MAX_HEIGHT - 50)
-                prev_height = y
-                height_history = { prev_height, prev_height, prev_height }
-            else
-                -- Otherwise use the same height as the previous point
-                y = points[i - 1].y
-            end
+        local y = point_info.y
+        prev_height = y
 
-            -- Store landing pad coordinates
-            if i == landing_pad_start_index then
-                landing_pad_start = x
-                landing_pad_height = y
-            elseif i == landing_pad_end_index then
-                landing_pad_end = x
-            end
-        else
-            -- Check if this is a mountain peak
-            if mountain_peaks[i] then
-                -- Create a taller mountain peak with more dramatic height
-                local peak_height = math.random(120, 200) -- Increased height for more dramatic mountains
-                y = math.max(Constants.MIN_HEIGHT, prev_height - peak_height)
-            else
-                -- Generate a more natural terrain with smoother transitions
-                -- Use the average of the last few heights plus a random change
-                local avg_height = (height_history[1] + height_history[2] + height_history[3]) / 3
-
-                -- Approaching a mountain or leaving a mountain
-                local near_mountain = false
-                for j = -2, 2 do
-                    if mountain_peaks[i + j] then
-                        near_mountain = true
-                        break
-                    end
-                end
-
-                local height_change
-                if near_mountain then
-                    -- Steeper slopes near mountains (increased range)
-                    height_change = math.random(-50, 50) -- More dramatic height changes
-                else
-                    -- Normal terrain
-                    height_change = math.random(-15, 15)
-                end
-
-                -- Occasionally add sharp crags
-                if math.random() < 0.1 and not near_mountain then
-                    height_change = height_change * 2.5 -- More dramatic crags
-                end
-
-                -- Ensure we stay within bounds
-                local new_height = avg_height + height_change
-                if new_height < Constants.MIN_HEIGHT then
-                    new_height = Constants.MIN_HEIGHT
-                elseif new_height > Constants.MAX_HEIGHT then
-                    new_height = Constants.MAX_HEIGHT
-                end
-
-                y = new_height
-            end
-
-            prev_height = y
+        -- Update height history
+        if not (i >= landing_pad_start_index and i <= landing_pad_end_index) then
             table.remove(height_history, 1)
             table.insert(height_history, y)
+        end
+
+        -- Store landing pad information
+        if i == landing_pad_start_index then
+            landing_pad_start = x
+            landing_pad_height = y
+        elseif i == landing_pad_end_index then
+            landing_pad_end = x
         end
 
         table.insert(points, { x = x, y = y })
     end
 
     -- Create segments from points
-    segments = Surface.createSegments(points, landing_pad_start, landing_pad_end)
+    local segments = Surface.createSegments(points, landing_pad_start, landing_pad_end)
 
     -- Reset detail elements when generating new terrain
     rock_formations = {}
@@ -136,6 +74,152 @@ function Surface.generate(screen_width)
         landing_pad_end = landing_pad_end,
         landing_pad_height = landing_pad_height
     }
+end
+
+---Generates landing pad information
+---@param num_points number Total number of terrain points
+---@return table Landing pad information
+function Surface.generateLandingPadInfo(num_points)
+    local landing_pad_segments = math.floor(Constants.LANDING_PAD_WIDTH / Constants.SEGMENT_WIDTH)
+    local landing_pad_start_index = math.random(2, num_points - landing_pad_segments - 1)
+    local landing_pad_end_index = landing_pad_start_index + landing_pad_segments
+
+    return {
+        start_index = landing_pad_start_index,
+        end_index = landing_pad_end_index,
+        segments = landing_pad_segments
+    }
+end
+
+---Generates mountain peaks for the terrain
+---@param num_points number Total number of terrain points
+---@param landing_pad_start_index number Starting index of landing pad
+---@param landing_pad_end_index number Ending index of landing pad
+---@return table Table of mountain peak positions
+function Surface.generateMountainPeaks(num_points, landing_pad_start_index, landing_pad_end_index)
+    local mountain_peaks = {}
+    local num_mountains = math.random(4, 7)
+
+    for i = 1, num_mountains do
+        local peak_index = math.random(1, num_points)
+        -- Avoid placing mountains on or near landing pads
+        while peak_index >= landing_pad_start_index - 3 and peak_index <= landing_pad_end_index + 3 do
+            peak_index = math.random(1, num_points)
+        end
+        mountain_peaks[peak_index] = true
+    end
+
+    return mountain_peaks
+end
+
+---Generates a single terrain point
+---@param index number Current point index
+---@param x number X coordinate
+---@param prev_height number Previous point height
+---@param height_history table History of recent heights
+---@param landing_pad_start_index number Starting index of landing pad
+---@param landing_pad_end_index number Ending index of landing pad
+---@param mountain_peaks table Table of mountain peak positions
+---@param points table Existing terrain points
+---@return table Point information
+function Surface.generateTerrainPoint(index, x, prev_height, height_history, landing_pad_start_index,
+                                      landing_pad_end_index, mountain_peaks, points)
+    local y
+
+    -- If this is part of the landing pad, make it flat
+    if index >= landing_pad_start_index and index <= landing_pad_end_index then
+        y = Surface.generateLandingPadPoint(index, landing_pad_start_index, prev_height, points)
+    else
+        -- Generate regular terrain or mountain point
+        if mountain_peaks[index] then
+            -- Create a mountain peak
+            local peak_height = math.random(120, 200)
+            y = math.max(Constants.MIN_HEIGHT, prev_height - peak_height)
+        else
+            -- Generate natural terrain
+            y = Surface.generateNaturalTerrainPoint(index, height_history, mountain_peaks)
+        end
+    end
+
+    return { y = y }
+end
+
+---Generates a landing pad point
+---@param index number Current point index
+---@param landing_pad_start_index number Starting index of landing pad
+---@param prev_height number Previous point height
+---@param points table Existing terrain points
+---@return number Y coordinate
+function Surface.generateLandingPadPoint(index, landing_pad_start_index, prev_height, points)
+    -- If this is the first point of the landing pad, set a random height
+    if index == landing_pad_start_index then
+        -- Make sure landing pad is in a valley, not too high
+        return math.random(Constants.MIN_HEIGHT + 50, Constants.MAX_HEIGHT - 50)
+    else
+        -- Otherwise use the same height as the previous point
+        return points[index - 1].y
+    end
+end
+
+---Generates a natural terrain point
+---@param index number Current point index
+---@param height_history table History of recent heights
+---@param mountain_peaks table Table of mountain peak positions
+---@return number Y coordinate
+function Surface.generateNaturalTerrainPoint(index, height_history, mountain_peaks)
+    -- Use the average of the last few heights plus a random change
+    local avg_height = (height_history[1] + height_history[2] + height_history[3]) / 3
+
+    -- Check if near a mountain
+    local near_mountain = Surface.isNearMountain(index, mountain_peaks)
+
+    -- Calculate height change based on terrain type
+    local height_change = Surface.calculateHeightChange(near_mountain)
+
+    -- Ensure we stay within bounds
+    local new_height = avg_height + height_change
+    if new_height < Constants.MIN_HEIGHT then
+        new_height = Constants.MIN_HEIGHT
+    elseif new_height > Constants.MAX_HEIGHT then
+        new_height = Constants.MAX_HEIGHT
+    end
+
+    return new_height
+end
+
+---Checks if a point is near a mountain
+---@param index number Current point index
+---@param mountain_peaks table Table of mountain peak positions
+---@return boolean True if near a mountain
+function Surface.isNearMountain(index, mountain_peaks)
+    for j = -2, 2 do
+        if mountain_peaks[index + j] then
+            return true
+        end
+    end
+    return false
+end
+
+---Calculates height change for a terrain point
+---@param near_mountain boolean Whether the point is near a mountain
+---@return number Height change value
+function Surface.calculateHeightChange(near_mountain)
+    local height_change
+
+    if near_mountain then
+        -- Steeper slopes near mountains
+        height_change = math.random(-50, 50)
+    else
+        -- Normal terrain
+        height_change = math.random(-15, 15)
+
+        -- Occasionally add sharp crags
+        if math.random() < 0.1 then
+            height_change = height_change * 2.5
+        end
+    end
+
+    return height_change
 end
 
 ---Creates line segments from the terrain points
@@ -319,8 +403,7 @@ function Surface.drawRockFormations(segments)
             local spire_points = rock_formations[i]
 
             -- Draw the spire with gradient fill
-            local base_y = segment.y1
-            local top_y = base_y - 40 -- Approximate height
+            -- Height is calculated in the gradient steps below
 
             -- Draw with gradient
             local gradient_steps = 8

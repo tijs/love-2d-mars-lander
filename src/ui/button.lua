@@ -13,12 +13,28 @@ local Theme = require("src.ui.theme")
 function Button.new(config)
     local self = setmetatable({}, Button)
 
+    -- Initialize button with default configuration
+    self:initializePosition(config)
+    self:initializeAppearance(config)
+    self:initializeEffects(config)
+    self:initializeState(config)
+
+    return self
+end
+
+---Initializes position and dimensions
+---@param config table Configuration options
+function Button:initializePosition(config)
     -- Position and dimensions
     self.x = config.x or 0
     self.y = config.y or 0
     self.width = config.width or 200
     self.height = config.height or 50
+end
 
+---Initializes appearance settings
+---@param config table Configuration options
+function Button:initializeAppearance(config)
     -- Text and styling
     self.text = config.text or "Button"
     self.font = config.font or love.graphics.getFont()
@@ -26,21 +42,27 @@ function Button.new(config)
     self.bg_color = config.bg_color or Theme.BUTTON.BACKGROUND_COLOR
     self.border_color = config.border_color or self.text_color
     self.corner_radius = config.corner_radius or Theme.BUTTON.CORNER_RADIUS
+end
 
+---Initializes visual effects
+---@param config table Configuration options
+function Button:initializeEffects(config)
     -- Effects
     self.pulse = config.pulse or false
     self.pulse_speed = config.pulse_speed or Theme.BUTTON.PULSE_SPEED
     self.pulse_amount = config.pulse_amount or Theme.BUTTON.PULSE_AMOUNT
     self.hover_effect = config.hover_effect or false
+end
 
+---Initializes state and action
+---@param config table Configuration options
+function Button:initializeState(config)
     -- State
     self.timer = 0
     self.hovered = false
 
     -- Action
     self.action = config.action or function() end
-
-    return self
 end
 
 ---Updates the button

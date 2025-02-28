@@ -15,36 +15,77 @@ local Theme = require("src.ui.theme")
 function ScrollablePanel.new(config)
     local self = setmetatable({}, ScrollablePanel)
 
+    -- Initialize panel with default configuration
+    self:initializeDimensions(config)
+    self:initializeHeader(config)
+    self:initializePanelStyle(config)
+    self:initializeContent(config)
+    self:initializeScrolling(config)
+    self:initializeButton(config)
+    self:initializeHint(config)
+    self:initializeSections(config)
+
+    return self
+end
+
+---Initializes panel dimensions and position
+---@param config table Configuration options
+function ScrollablePanel:initializeDimensions(config)
     -- Panel dimensions and position
     self.x = config.x or 0
     self.y = config.y or 0
     self.width = config.width or 400
     self.height = config.height or 300
+end
 
+---Initializes header configuration
+---@param config table Configuration options
+function ScrollablePanel:initializeHeader(config)
     -- Header configuration
     self.header_height = config.header_height or 60
     self.header_color = config.header_color or Theme.PANEL.HEADER_COLOR
     self.title = config.title or "Scrollable Panel"
     self.title_font = config.title_font or love.graphics.getFont()
     self.title_color = config.title_color or Theme.COLORS.BLACK
+end
 
+---Initializes panel styling
+---@param config table Configuration options
+function ScrollablePanel:initializePanelStyle(config)
     -- Panel styling
     self.panel_color = config.bg_color or Theme.PANEL.BACKGROUND_COLOR
     self.corner_radius = config.corner_radius or Theme.PANEL.CORNER_RADIUS
+end
 
+---Initializes content configuration
+---@param config table Configuration options
+function ScrollablePanel:initializeContent(config)
     -- Content configuration
     self.content = config.content or {}
     self.content_font = config.content_font or love.graphics.getFont()
     self.content_color = config.text_color or Theme.PANEL.TEXT_COLOR
     self.line_height = config.line_height or 28
     self.content_padding = config.content_padding or 40 -- Left padding for content
+end
 
+---Initializes scrolling configuration
+---@param config table Configuration options
+function ScrollablePanel:initializeScrolling(config)
     -- Scrolling
     self.scroll_position = 0
     self.scroll_speed = config.scroll_speed or 300 -- Pixels per second
+end
 
+---Initializes button configuration
+---@param config table Configuration options
+function ScrollablePanel:initializeButton(config)
     -- Button configuration (optional)
     self.show_button = config.show_button or false
+
+    if not self.show_button then
+        return
+    end
+
     self.button_text = config.button_text or "Back"
     self.button_font = config.button_font or love.graphics.getFont()
     self.button_color = config.button_color or Theme.BUTTON.TEXT_COLOR
@@ -54,25 +95,31 @@ function ScrollablePanel.new(config)
     self.button_action = config.button_action or function() end
     self.button_margin = config.button_margin or 30 -- Margin from bottom of panel
 
-    -- Create button if needed
-    if self.show_button then
-        self.button = Button.new({
-            text = self.button_text,
-            font = self.button_font,
-            text_color = self.button_color,
-            bg_color = self.button_bg_color,
-            width = self.button_width,
-            height = self.button_height,
-            action = self.button_action
-        })
-    end
+    -- Create button
+    self.button = Button.new({
+        text = self.button_text,
+        font = self.button_font,
+        text_color = self.button_color,
+        bg_color = self.button_bg_color,
+        width = self.button_width,
+        height = self.button_height,
+        action = self.button_action
+    })
+end
 
+---Initializes hint configuration
+---@param config table Configuration options
+function ScrollablePanel:initializeHint(config)
     -- Hint text (optional)
     self.show_hint = config.show_hint or false
     self.hint_text = config.hint_text or "Press ENTER or ESC to return"
     self.hint_font = config.hint_font or love.graphics.getFont()
     self.hint_color = config.hint_color or Theme.PANEL.HINT_COLOR
+end
 
+---Initializes section formatting
+---@param config table Configuration options
+function ScrollablePanel:initializeSections(config)
     -- Section formatting (optional)
     self.sections = config.sections or nil
     self.section_font = config.section_font or love.graphics.getFont()
@@ -82,8 +129,6 @@ function ScrollablePanel.new(config)
 
     -- Highlight formatting (optional)
     self.highlight_color = config.highlight_color or Theme.PANEL.HIGHLIGHT_COLOR
-
-    return self
 end
 
 ---Draws the scrollable panel
@@ -122,22 +167,19 @@ function ScrollablePanel:draw()
     -- Set up scissor to create scrollable area
     love.graphics.setScissor(self.x, content_start_y, self.width, content_area_height)
 
-    -- Calculate total content height and draw content
-    local total_content_height = 0
-
+    -- Draw content
+    local content_height
     if self.sections then
-        -- Draw sectioned content
-        total_content_height = self:drawSectionedContent(content_start_y, content_end_y)
+        content_height = self:drawSectionedContent(content_start_y, content_end_y)
     else
-        -- Draw regular content
-        total_content_height = self:drawRegularContent(content_start_y, content_end_y)
+        content_height = self:drawRegularContent(content_start_y, content_end_y)
     end
 
     -- Reset scissor
     love.graphics.setScissor()
 
     -- Calculate max scroll position
-    local max_scroll = math.max(0, total_content_height - content_area_height)
+    local max_scroll = math.max(0, content_height - content_area_height)
     self.scroll_position = math.min(self.scroll_position, max_scroll)
 
     -- Draw scroll indicators if content is scrollable
@@ -265,8 +307,10 @@ function ScrollablePanel:drawScrollIndicators(content_start_y, content_area_heig
         content_area_height)
 
     -- Draw scroll bar handle
-    local handle_height = math.max(30, content_area_height * (content_area_height / (content_area_height + max_scroll)))
-    local handle_position = content_start_y + (self.scroll_position / max_scroll) * (content_area_height - handle_height)
+    local ratio = content_area_height / (content_area_height + max_scroll)
+    local handle_height = math.max(30, content_area_height * ratio)
+    local scroll_ratio = self.scroll_position / max_scroll
+    local handle_position = content_start_y + scroll_ratio * (content_area_height - handle_height)
 
     love.graphics.setColor(0.7, 0.7, 0.7, 0.8)
     love.graphics.rectangle("fill",

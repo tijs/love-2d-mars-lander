@@ -1,9 +1,6 @@
 -- Landing pad for the Martian terrain
 local LandingPad = {}
 
--- Import constants
-local Constants = require("src.entities.terrain.constants")
-
 -- Initialize variables for pulsating effect
 local pulse_speed = 2 -- Speed of pulsation
 local pulse_min = 0.4 -- Minimum brightness

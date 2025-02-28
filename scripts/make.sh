@@ -9,7 +9,7 @@ set -e
 # Configuration
 GAME_NAME="Mars Lander"
 BUNDLE_ID="org.tijs.marslander"
-VERSION="1.0"
+VERSION_FILE=".version"
 COPYRIGHT="© 2025 Tijs Teulings"
 LOVE_APP="/Applications/love.app"
 OUTPUT_DIR="./dist"
@@ -20,6 +20,22 @@ mkdir -p "$OUTPUT_DIR"
 echo "=== Building $GAME_NAME for macOS ==="
 echo ""
 
+# Get the last used version number or use default
+LAST_VERSION="1.0"
+if [ -f "$VERSION_FILE" ]; then
+    LAST_VERSION=$(cat "$VERSION_FILE")
+fi
+
+# Ask for version number
+read -p "Enter version number [$LAST_VERSION]: " VERSION
+VERSION=${VERSION:-$LAST_VERSION}
+
+# Save the version number for next time
+echo "$VERSION" > "$VERSION_FILE"
+
+echo "Building version $VERSION"
+echo ""
+
 # Step 1: Create .love file
 echo "Step 1: Creating .love file..."
 if [ -f "$OUTPUT_DIR/$GAME_NAME.love" ]; then
@@ -27,7 +43,7 @@ if [ -f "$OUTPUT_DIR/$GAME_NAME.love" ]; then
 fi
 
 # Exclude unnecessary files from the .love package
-zip -9 -r "$OUTPUT_DIR/$GAME_NAME.love" . -x "*.git*" "*.DS_Store" "*.vscode*" "*.love" "dist/*" "scripts/*" "Mars Lander.app/*" "Mars Lander-macOS.zip"
+zip -9 -r "$OUTPUT_DIR/$GAME_NAME.love" . -x "*.git*" "*.DS_Store" "*.vscode*" "*.love" "dist/*" "scripts/*" "Mars Lander.app/*" "Mars Lander-macOS.zip" ".version"
 echo "Created $OUTPUT_DIR/$GAME_NAME.love"
 echo ""
 
@@ -84,8 +100,37 @@ fi
 echo "Created $ZIP_FILE"
 echo ""
 
+# Step 6: Create a git tag for this version
+echo "Step 6: Creating git tag for version $VERSION..."
+TAG_NAME="v$VERSION"
+
+# Check if tag already exists
+if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+    read -p "Tag $TAG_NAME already exists. Overwrite? (y/n): " OVERWRITE
+    if [ "$OVERWRITE" = "y" ]; then
+        git tag -d "$TAG_NAME"
+        git tag -a "$TAG_NAME" -m "Version $VERSION release"
+        echo "Overwritten tag $TAG_NAME"
+    else
+        echo "Skipped creating tag $TAG_NAME"
+    fi
+else
+    git tag -a "$TAG_NAME" -m "Version $VERSION release"
+    echo "Created tag $TAG_NAME"
+fi
+
+# Ask if the tag should be pushed
+read -p "Push tag to remote repository? (y/n): " PUSH_TAG
+if [ "$PUSH_TAG" = "y" ]; then
+    git push origin "$TAG_NAME"
+    echo "Pushed tag $TAG_NAME to remote repository"
+fi
+
+echo ""
 echo "=== Build completed successfully! ==="
+echo "Version: $VERSION"
 echo "Application bundle: $APP_BUNDLE"
 echo "Distributable ZIP: $ZIP_FILE"
+echo "Git tag: $TAG_NAME"
 echo ""
-echo "You can distribute the ZIP file to macOS users." 
+echo "You can distribute the ZIP file to macOS users."

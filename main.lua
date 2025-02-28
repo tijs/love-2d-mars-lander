@@ -7,7 +7,8 @@ local MenuScene = require("src.scenes.menu_scene")
 local GameScene = require("src.scenes.game_scene")
 local GameOverScene = require("src.scenes.game_over_scene")
 local LevelCompleteScene = require("src.scenes.level_complete_scene")
-local CreditsScene = require("src.scenes.credits_scene") -- File is still named settings_scene.lua but contains CreditsScene
+local CreditsScene = require("src.scenes.credits_scene")
+-- Credits scene module (previously named settings_scene)
 
 -- Global fonts
 fonts = {
