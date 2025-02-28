@@ -7,7 +7,7 @@ local MenuScene = require("src.scenes.menu_scene")
 local GameScene = require("src.scenes.game_scene")
 local GameOverScene = require("src.scenes.game_over_scene")
 local LevelCompleteScene = require("src.scenes.level_complete_scene")
-local SettingsScene = require("src.scenes.settings_scene")
+local CreditsScene = require("src.scenes.credits_scene") -- File is still named settings_scene.lua but contains CreditsScene
 
 -- Global fonts
 fonts = {
@@ -42,7 +42,7 @@ function love.load()
     SceneManager.register("game", GameScene.new())
     SceneManager.register("game_over", GameOverScene.new())
     SceneManager.register("level_complete", LevelCompleteScene.new())
-    SceneManager.register("settings", SettingsScene.new())
+    SceneManager.register("credits", CreditsScene.new())
 
     -- Start with the menu scene
     SceneManager.changeScene("menu")
@@ -84,4 +84,10 @@ end
 function love.keyreleased(key)
     -- Pass key release to scene manager
     SceneManager.keyreleased(key)
+end
+
+-- Handle mouse press events
+function love.mousepressed(x, y, button)
+    -- Pass mouse press to scene manager
+    SceneManager.mousepressed(x, y, button)
 end

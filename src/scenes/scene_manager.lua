@@ -23,10 +23,10 @@ function SceneManager.changeScene(name, ...)
         if current_scene and current_scene.unload then
             current_scene:unload()
         end
-        
+
         -- Set new scene
         current_scene = scenes[name]
-        
+
         -- Load new scene
         if current_scene.load then
             current_scene:load(...)
@@ -80,4 +80,14 @@ function SceneManager.updateKeyPresses()
     end
 end
 
-return SceneManager 
+---Handles mouse press events
+---@param x number The x coordinate
+---@param y number The y coordinate
+---@param button number The button that was pressed
+function SceneManager.mousepressed(x, y, button)
+    if current_scene and current_scene.mousepressed then
+        current_scene:mousepressed(x, y, button)
+    end
+end
+
+return SceneManager

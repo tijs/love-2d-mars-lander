@@ -4,17 +4,17 @@ MenuScene.__index = MenuScene
 
 -- Import required modules
 local SceneManager = require("src.scenes.scene_manager")
+local ScrollablePanel = require("src.ui.scrollable_panel")
+local Button = require("src.ui.button")
+local Theme = require("src.ui.theme")
 
 -- Constants
-local TITLE_COLOR = { 0.9, 0.3, 0.2, 1 }     -- Mars red
-local MENU_ITEM_COLOR = { 1, 1, 1, 0.8 }     -- White with slight transparency
-local SELECTED_ITEM_COLOR = { 1, 0.8, 0, 1 } -- Gold
-local MENU_ITEM_SPACING = 40
-local MENU_START_Y = 300
+local MENU_ITEM_SPACING = Theme.MENU.ITEM_SPACING
+local MENU_START_Y = Theme.MENU.START_Y
 
 -- Mars surface colors
-local MARS_SURFACE_COLOR = { 0.7, 0.3, 0.2, 1 } -- Darker Mars red for surface
-local MARS_SKY_COLOR = { 0.1, 0.05, 0.1, 1 }    -- Dark purplish for Mars sky
+local MARS_SURFACE_COLOR = Theme.ENVIRONMENT.MARS_SURFACE_COLOR
+local MARS_SKY_COLOR = Theme.ENVIRONMENT.MARS_SKY_COLOR
 
 ---Creates a new menu scene
 ---@return table The new menu scene instance
@@ -29,7 +29,7 @@ function MenuScene:load()
     self.menu_items = {
         { text = "Start Game",  action = function() SceneManager.changeScene("game") end },
         { text = "How to Play", action = function() self:showInstructions() end },
-        { text = "Settings",    action = function() SceneManager.changeScene("settings") end },
+        { text = "Credits",     action = function() SceneManager.changeScene("credits") end },
         { text = "Quit",        action = function() love.event.quit() end }
     }
 
@@ -49,6 +49,68 @@ function MenuScene:load()
 
     -- Flag to show instructions
     self.showing_instructions = false
+
+    -- Create back button for instructions
+    self.back_button = Button.new({
+        text = "Back to Menu",
+        font = fonts.large,
+        text_color = Theme.BUTTON.TEXT_COLOR,
+        pulse = true,
+        pulse_speed = Theme.BUTTON.PULSE_SPEED,
+        pulse_amount = Theme.BUTTON.PULSE_AMOUNT,
+        action = function() self.showing_instructions = false end
+    })
+
+    -- Create scrollable panel for instructions
+    self.instructions_panel = ScrollablePanel.new({
+        title = "HOW TO PLAY",
+        title_font = fonts.title_font,
+        content_font = fonts.medium,
+        section_font = fonts.large,
+        hint_font = fonts.small,
+        show_hint = true,
+        hint_text = "Press ESC or ENTER to return",
+        content = {
+            "Welcome to Mars Lander!",
+            "",
+            "Your mission is to safely land the spacecraft",
+            "on the designated landing pads on the surface of Mars.",
+            "",
+            "CONTROLS:",
+            "- LEFT/RIGHT ARROW KEYS: Rotate the lander",
+            "- UP ARROW KEY: Fire main engine (thrust)",
+            "- DOWN ARROW KEY: Fire retro rockets (slow descent)",
+            "",
+            "LANDING REQUIREMENTS:",
+            "- Land GENTLY on a flat landing pad",
+            "- Keep your vertical speed under 20 m/s",
+            "- Keep your horizontal speed under 15 m/s",
+            "- Land with the lander in an upright position",
+            "",
+            "FUEL MANAGEMENT:",
+            "- Monitor your fuel gauge carefully",
+            "- Once you run out of fuel, you can no longer",
+            "  control the lander's descent",
+            "",
+            "TIPS:",
+            "- Start slowing your descent early",
+            "- Use short bursts to conserve fuel",
+            "- Aim for the center of the landing pad",
+            "- Counter horizontal movement before landing",
+            "",
+            "Good luck, Commander!"
+        },
+        bg_color = Theme.PANEL.BACKGROUND_COLOR,
+        header_color = Theme.PANEL.HEADER_COLOR,
+        text_color = Theme.PANEL.TEXT_COLOR,
+        show_button = false, -- We'll use our custom button instead
+        show_scroll_indicators = true,
+        scroll_speed = 300
+    })
+
+    -- Scrolling for instructions
+    self.scroll_position = 0
+    self.scroll_speed = 300 -- Pixels per second
 
     -- Create a simple lander for the menu
     self.lander = {
@@ -85,14 +147,23 @@ function MenuScene:update(dt)
         end
     end
 
-    -- Update lander
-    self.lander.rotation = self.lander.rotation + math.sin(love.timer.getTime() * 0.5) * 0.002
+    -- Update the selected menu item based on keyboard input
+    if not self.showing_instructions then
+        -- Update lander
+        self.lander.rotation = self.lander.rotation + math.sin(love.timer.getTime() * 0.5) * 0.002
 
-    -- Random thruster effect
-    self.lander.thruster_timer = self.lander.thruster_timer - dt
-    if self.lander.thruster_timer <= 0 then
-        self.lander.thruster = not self.lander.thruster
-        self.lander.thruster_timer = math.random(5, 15) / 10 -- Random time between thruster changes
+        -- Random thruster effect
+        self.lander.thruster_timer = self.lander.thruster_timer - dt
+        if self.lander.thruster_timer <= 0 then
+            self.lander.thruster = not self.lander.thruster
+            self.lander.thruster_timer = math.random(5, 15) / 10 -- Random time between thruster changes
+        end
+    else
+        -- Update instructions panel
+        self.instructions_panel:update(dt)
+
+        -- Update back button
+        self.back_button:update(dt)
     end
 end
 
@@ -144,17 +215,17 @@ function MenuScene:drawLander()
     love.graphics.scale(self.lander.scale, self.lander.scale)
 
     -- Draw lander body
-    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.setColor(Theme.LANDER.BODY_COLOR)
     love.graphics.polygon("fill", 0, -10, 10, 10, -10, 10)
 
     -- Draw landing legs
-    love.graphics.setColor(0.7, 0.7, 0.7)
+    love.graphics.setColor(Theme.LANDER.LEGS_COLOR)
     love.graphics.line(-10, 10, -15, 15)
     love.graphics.line(10, 10, 15, 15)
 
     -- Draw thruster flame if active
     if self.lander.thruster then
-        love.graphics.setColor(1, 0.5, 0, 0.8)
+        love.graphics.setColor(Theme.LANDER.THRUSTER_COLOR)
         love.graphics.polygon("fill", -5, 10, 5, 10, 0, 20)
     end
 
@@ -165,14 +236,14 @@ end
 function MenuScene:drawMenu()
     -- Draw title with the new font
     love.graphics.setFont(fonts.title_font)
-    love.graphics.setColor(TITLE_COLOR)
+    love.graphics.setColor(Theme.MENU.TITLE_COLOR)
     local title = "MARS LANDER"
     local title_width = fonts.title_font:getWidth(title)
     love.graphics.print(title, (love.graphics.getWidth() - title_width) / 2, 120)
 
     -- Draw subtitle
     love.graphics.setFont(fonts.medium)
-    love.graphics.setColor(0.9, 0.9, 0.9, 0.8)
+    love.graphics.setColor(Theme.COLORS.WHITE_TRANSPARENT)
     local subtitle = "A mission to the red planet"
     local subtitle_width = fonts.medium:getWidth(subtitle)
     love.graphics.print(subtitle, (love.graphics.getWidth() - subtitle_width) / 2, 170)
@@ -181,12 +252,12 @@ function MenuScene:drawMenu()
     love.graphics.setFont(fonts.large)
     for i, item in ipairs(self.menu_items) do
         if i == self.selected_item then
-            love.graphics.setColor(SELECTED_ITEM_COLOR)
+            love.graphics.setColor(Theme.MENU.SELECTED_ITEM_COLOR)
             love.graphics.print("> " .. item.text,
                 (love.graphics.getWidth() - fonts.large:getWidth(item.text)) / 2 - 20,
                 MENU_START_Y + (i - 1) * MENU_ITEM_SPACING)
         else
-            love.graphics.setColor(MENU_ITEM_COLOR)
+            love.graphics.setColor(Theme.MENU.ITEM_COLOR)
             love.graphics.print(item.text,
                 (love.graphics.getWidth() - fonts.large:getWidth(item.text)) / 2,
                 MENU_START_Y + (i - 1) * MENU_ITEM_SPACING)
@@ -195,7 +266,7 @@ function MenuScene:drawMenu()
 
     -- Draw footer
     love.graphics.setFont(fonts.small)
-    love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
+    love.graphics.setColor(Theme.COLORS.LIGHT_GRAY)
     local footer = "Use arrow keys to navigate, Enter to select"
     local footer_width = fonts.small:getWidth(footer)
     love.graphics.print(footer,
@@ -205,148 +276,51 @@ end
 
 ---Draws the instructions screen
 function MenuScene:drawInstructions()
-    -- Keep drawing the background elements
-    -- Draw background (Mars sky) - already drawn in the main draw function
+    -- Draw the instructions panel
+    local panel_width = love.graphics.getWidth() * 0.6
+    local panel_height = love.graphics.getHeight() * 0.65
+    local panel_x = love.graphics.getWidth() * 0.15
+    local panel_y = love.graphics.getHeight() * 0.15
 
-    -- Calculate dimensions for better layout
-    local panel_width = love.graphics.getWidth() * 0.7
-    local panel_height = love.graphics.getHeight() * 0.75
-    local panel_x = (love.graphics.getWidth() - panel_width) / 2
-    local panel_y = love.graphics.getHeight() * 0.12
-    local header_height = 60
+    -- Update panel dimensions
+    self.instructions_panel.x = panel_x
+    self.instructions_panel.y = panel_y
+    self.instructions_panel.width = panel_width
+    self.instructions_panel.height = panel_height
 
-    -- Draw a semi-transparent panel for instructions
-    love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.rectangle("fill",
-        panel_x,
-        panel_y,
-        panel_width,
-        panel_height,
-        10, 10) -- Adding rounded corners
+    -- Draw the panel
+    self.instructions_panel:draw()
 
-    -- Add a header bar
-    love.graphics.setColor(TITLE_COLOR[1], TITLE_COLOR[2], TITLE_COLOR[3], 0.9)
-    love.graphics.rectangle("fill",
-        panel_x,
-        panel_y,
-        panel_width,
-        header_height,
-        10, 10) -- Rounded corners
-
-    -- Draw title with the custom font
-    love.graphics.setFont(fonts.title_font)
-    love.graphics.setColor(0, 0, 0, 1) -- Black text on red header
-    local title = "HOW TO PLAY"
-    local title_width = fonts.title_font:getWidth(title)
-    love.graphics.print(title,
-        (love.graphics.getWidth() - title_width) / 2,
-        panel_y + (header_height - fonts.title_font:getHeight()) / 2)
-
-    -- Draw instructions
-    love.graphics.setFont(fonts.medium)
-    love.graphics.setColor(0.9, 0.9, 0.9, 1)
-
-    local instructions = {
-        "Land your spacecraft safely on the flat landing pads.",
-        "Control your descent with the following keys:",
-        "",
-        "UP ARROW: Activate main thruster",
-        "LEFT/RIGHT ARROWS: Rotate spacecraft",
-        "R: Restart level",
-        "ESC: Pause game",
-        "",
-        "For a successful landing:",
-        "- Touch down gently (low velocity)",
-        "- Land with a level orientation",
-        "- Land on a designated landing pad",
-        "- Conserve fuel for bonus points"
-    }
-
-    local content_start_y = panel_y + header_height + 20
-    local line_height = 28
-
-    for i, line in ipairs(instructions) do
-        local y_pos = content_start_y + (i - 1) * line_height
-
-        -- Highlight key controls with gold color
-        if i >= 4 and i <= 7 and line ~= "" then
-            -- Split the line at the colon
-            local parts = {}
-            for part in string.gmatch(line, "[^:]+") do
-                table.insert(parts, part)
-            end
-
-            if #parts == 2 then
-                -- Draw the key part in gold
-                love.graphics.setColor(SELECTED_ITEM_COLOR)
-                love.graphics.print(parts[1] .. ":", panel_x + 40, y_pos)
-
-                -- Draw the description in white
-                love.graphics.setColor(0.9, 0.9, 0.9, 1)
-                local key_width = fonts.medium:getWidth(parts[1] .. ":")
-                love.graphics.print(parts[2], panel_x + 40 + key_width, y_pos)
-            else
-                love.graphics.print(line, panel_x + 40, y_pos)
-            end
-        else
-            love.graphics.print(line, panel_x + 40, y_pos)
-        end
-    end
-
-    -- Calculate button position to be inside the panel
+    -- Update and draw back button
     local button_width = 200
     local button_height = 50
     local button_x = (love.graphics.getWidth() - button_width) / 2
-    local button_y = panel_y + panel_height - button_height - 30
+    local button_y = panel_y + panel_height + 30
 
-    -- Button background
-    love.graphics.setColor(0.2, 0.2, 0.2, 0.9)
-    love.graphics.rectangle("fill",
-        button_x,
-        button_y,
-        button_width,
-        button_height,
-        8, 8) -- Rounded corners
-
-    -- Button border
-    love.graphics.setColor(SELECTED_ITEM_COLOR)
-    love.graphics.rectangle("line",
-        button_x,
-        button_y,
-        button_width,
-        button_height,
-        8, 8) -- Rounded corners
-
-    -- Button text
-    love.graphics.setFont(fonts.large)
-    love.graphics.setColor(SELECTED_ITEM_COLOR)
-    local back_text = "Back to Menu"
-    local back_width = fonts.large:getWidth(back_text)
-    love.graphics.print(back_text,
-        button_x + (button_width - back_width) / 2,
-        button_y + (button_height - fonts.large:getHeight()) / 2)
-
-    -- Add a hint at the bottom of the panel
-    love.graphics.setFont(fonts.small)
-    love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
-    local hint = "Press ENTER or ESC to return"
-    local hint_width = fonts.small:getWidth(hint)
-    love.graphics.print(hint,
-        (love.graphics.getWidth() - hint_width) / 2,
-        panel_y + panel_height - 15)
+    self.back_button:setPosition(button_x, button_y)
+    self.back_button:setDimensions(button_width, button_height)
+    self.back_button:draw()
 end
 
 ---Shows the instructions screen
 function MenuScene:showInstructions()
     self.showing_instructions = true
+    self.instructions_panel:resetScroll() -- Reset scroll position
 end
 
 ---Handles key press events
 ---@param key string The key that was pressed
 function MenuScene:keypressed(key)
     if self.showing_instructions then
-        if key == "return" or key == "escape" or key == "space" then
+        -- Handle back button via keyboard first
+        if key == "escape" or key == "backspace" or key == "return" or key == "space" then
             self.showing_instructions = false
+            return true
+        end
+
+        -- Then let the panel handle scrolling keys
+        if self.instructions_panel:keypressed(key) then
+            return
         end
     else
         if key == "up" then
@@ -368,7 +342,21 @@ end
 
 ---Handles continuous key presses
 function MenuScene:updateKeyPresses()
-    -- Not needed for menu scene
+    -- No longer needed as the panel handles this
+end
+
+function MenuScene:mousepressed(x, y, button)
+    if self.showing_instructions then
+        -- Check if back button was clicked
+        if self.back_button:mousepressed(x, y, button) then
+            return
+        end
+
+        -- Let the panel handle mouse presses
+        if self.instructions_panel:mousepressed(x, y, button) then
+            return
+        end
+    end
 end
 
 return MenuScene

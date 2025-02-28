@@ -68,6 +68,32 @@ The project includes a comprehensive linting setup for maintaining code quality:
 
 For detailed setup instructions, see [LINTING.md](LINTING.md).
 
+## Credits
+
+### Game Development
+- Mars Lander - A LÖVE2D Game
+- A physics-based landing simulation
+- Developed as an open-source project
+- Inspired by classic arcade games
+
+### Font Credits
+- "Press Start 2P" Font by CodeMan38
+- Copyright 2012 The Press Start 2P Project Authors
+- Licensed under the SIL Open Font License, Version 1.1
+- Font available at fonts.google.com
+
+### AI Assistance
+- Game design assistance by Claude 3.7 Sonnet
+- Developed by Anthropic
+- Used for code generation and game design
+- Part of the creative development process
+
+### Special Thanks
+- LÖVE2D Framework and Community
+- Open Source Game Development Resources
+- Beta Testers and Early Players
+- Everyone who provided feedback and support
+
 ## License
 
 This project is open source and available under the MIT License. 
