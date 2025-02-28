@@ -5,4 +5,28 @@
 	],
 	"Lua.runtime.version": "LuaJIT",
 	"Lua.workspace.checkThirdParty": false,
+	"Lua.diagnostics.enable": true,
+	"Lua.diagnostics.globals": ["love"],
+	"Lua.telemetry.enable": false,
+	"Lua.completion.callSnippet": "Replace",
+	"Lua.completion.keywordSnippet": "Replace",
+	"Lua.runtime.special": {
+		"love.filesystem.load": "loadfile"
+	},
+	"Lua.workspace.userThirdParty": [
+		"${env:USERPROFILE}/.vscode/extensions/sumneko.lua-*",
+		"${env:HOME}/.vscode/extensions/sumneko.lua-*"
+	],
+	"Lua.diagnostics.severity": {
+		"redefined-local": "Warning",
+		"trailing-space": "Information",
+		"unused-local": "Warning",
+		"unused-function": "Warning",
+		"unused-vararg": "Warning",
+		"unused-label": "Warning"
+	},
+	"editor.formatOnSave": true,
+	"[lua]": {
+		"editor.defaultFormatter": "sumneko.lua"
+	}
 }

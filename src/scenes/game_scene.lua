@@ -89,6 +89,9 @@ function GameScene:update(dt)
     -- Update starfield (always update regardless of game state)
     self.starfield:update(dt)
     
+    -- Update terrain (always update for dust particles)
+    self.terrain:update(dt)
+    
     -- Skip updates if showing instructions
     if self.show_instructions then
         return
@@ -221,7 +224,8 @@ end
 ---Draws the game scene
 function GameScene:draw()
     -- Draw background (Mars sky)
-    love.graphics.setBackgroundColor(0.5, 0.2, 0.1)
+    -- Note: Sky is now drawn by the terrain object
+    -- love.graphics.setBackgroundColor(0.5, 0.2, 0.1)
     
     -- Draw starfield background
     self.starfield:draw()

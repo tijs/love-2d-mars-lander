@@ -51,10 +51,22 @@ In Mars Lander, you control a spacecraft and must navigate it safely to a landin
 ## Development
 
 This game was developed following the LÖVE2D project guidelines and best practices:
+
 - Object-oriented design with Lua metatables
 - Separation of logic and rendering
 - Efficient collision detection
 - Proper game state management
+
+## Code Quality and Linting
+
+The project includes a comprehensive linting setup for maintaining code quality:
+
+- Lua Language Server integration for real-time error detection
+- Automatic code formatting with StyLua
+- EditorConfig for consistent coding style
+- Luacheck configuration for additional static analysis
+
+For detailed setup instructions, see [LINTING.md](LINTING.md).
 
 ## License
 

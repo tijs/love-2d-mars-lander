@@ -1,0 +1,31 @@
+# Build output
+dist/
+
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Löve2D specific
+*.love
+
+# Editor directories and files
+.vscode/.ropeproject/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Application bundles
+*.app
+*.exe
+*.zip
+
+# Linting and formatting related
+.luacheckcache
+.styluacache

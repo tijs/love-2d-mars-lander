@@ -2,125 +2,109 @@
 local Terrain = {}
 Terrain.__index = Terrain
 
+-- Import modules
+local Constants = require("src.entities.terrain.constants")
+local Sky = require("src.entities.terrain.sky")
+local Features = require("src.entities.terrain.features")
+local LandingPad = require("src.entities.terrain.landing_pad")
+local Surface = require("src.entities.terrain.surface")
+local Starfield = require("src.entities.starfield")
+
 -- Constants for terrain generation
 local MIN_HEIGHT = 400
 local MAX_HEIGHT = 550
 local SEGMENT_WIDTH = 20
-local LANDING_PAD_WIDTH = 80  -- Increased from 60 to make landing easier
+local LANDING_PAD_WIDTH = 80 -- Increased from 60 to make landing easier
 
--- Mars terrain colors
+-- Enhanced Mars terrain colors
 local TERRAIN_COLORS = {
-    {0.8, 0.4, 0.2},  -- Light reddish-orange
-    {0.7, 0.3, 0.2},  -- Medium reddish-brown
-    {0.6, 0.25, 0.15} -- Dark reddish-brown
+    { 0.85, 0.4,  0.25 }, -- Light reddish-orange (surface)
+    { 0.75, 0.35, 0.2 },  -- Medium reddish-brown
+    { 0.65, 0.3,  0.15 }, -- Dark reddish-brown
+    { 0.55, 0.25, 0.12 }, -- Very dark reddish-brown (deep terrain)
+    { 0.9,  0.5,  0.3 }   -- Light orange-red (highlights)
+}
+
+-- Sky colors for atmospheric gradient
+local SKY_COLORS = {
+    { 0.8, 0.4,  0.3 }, -- Light orange-red (horizon)
+    { 0.6, 0.25, 0.2 }, -- Medium red (mid sky)
+    { 0.4, 0.15, 0.15 } -- Dark red (upper sky)
 }
 
 -- Crater constants
-local CRATER_CHANCE = 0.15  -- Chance of a crater at each terrain point
+local CRATER_CHANCE = 0.2       -- Increased chance of craters
 local MIN_CRATER_SIZE = 5
-local MAX_CRATER_SIZE = 15
+local MAX_CRATER_SIZE = 20      -- Larger max crater size
+local CRATER_DEPTH_FACTOR = 0.3 -- How deep craters appear
+
+-- Rock constants
+local ROCK_CHANCE = 0.15
+local MIN_ROCK_SIZE = 3
+local MAX_ROCK_SIZE = 8
+
+-- Dust constants
+local DUST_PARTICLES = 100
+local DUST_SIZE_MIN = 1
+local DUST_SIZE_MAX = 3
+local DUST_SPEED_MIN = 10
+local DUST_SPEED_MAX = 30
 
 ---Creates a new terrain instance
 ---@return table The new terrain instance
 function Terrain.new()
     local self = setmetatable({}, Terrain)
-    
-    -- Generate terrain points
-    self.points = {}
-    self.segments = {}
-    self.landing_pad_start = nil
-    self.landing_pad_end = nil
-    self.landing_pad_height = nil
-    
-    -- Craters for visual detail
+
+    -- Generate terrain data
+    local screen_width = love.graphics.getWidth()
+    local terrain_data = Surface.generate(screen_width)
+
+    -- Store terrain data
+    self.points = terrain_data.points
+    self.segments = terrain_data.segments
+    self.landing_pad_start = terrain_data.landing_pad_start
+    self.landing_pad_end = terrain_data.landing_pad_end
+    self.landing_pad_height = terrain_data.landing_pad_height
+
+    -- Initialize features
     self.craters = {}
-    
-    -- Generate the terrain
-    self:generate()
-    
+    self.rocks = {}
+
+    -- Generate features
+    self:generateFeatures()
+
+    -- Initialize dust particles
+    self.dust_particles = Sky.initDustParticles(self)
+
+    -- Initialize starfield
+    self.starfield = Starfield.new()
+
     return self
 end
 
----Generates the terrain points
-function Terrain:generate()
-    local screen_width = love.graphics.getWidth()
-    local num_points = math.ceil(screen_width / SEGMENT_WIDTH) + 1
-    
-    -- Choose a random position for the landing pad
-    local landing_pad_segments = math.floor(LANDING_PAD_WIDTH / SEGMENT_WIDTH)
-    local landing_pad_start_index = math.random(2, num_points - landing_pad_segments - 1)
-    local landing_pad_end_index = landing_pad_start_index + landing_pad_segments
-    
-    -- Generate height for each point
-    for i = 1, num_points do
-        local x = (i - 1) * SEGMENT_WIDTH
-        local y
-        
-        -- If this is part of the landing pad, make it flat
-        if i >= landing_pad_start_index and i <= landing_pad_end_index then
-            -- If this is the first point of the landing pad, set a random height
-            if i == landing_pad_start_index then
-                y = math.random(MIN_HEIGHT, MAX_HEIGHT)
-            else
-                -- Otherwise use the same height as the previous point
-                y = self.points[i-1].y
-            end
-            
-            -- Store landing pad coordinates
-            if i == landing_pad_start_index then
-                self.landing_pad_start = x
-                self.landing_pad_height = y
-            elseif i == landing_pad_end_index then
-                self.landing_pad_end = x
-            end
-        else
-            -- Generate a random height for non-landing pad points
-            y = math.random(MIN_HEIGHT, MAX_HEIGHT)
-        end
-        
-        table.insert(self.points, {x = x, y = y})
-        
-        -- Randomly add craters for visual detail (not on landing pads)
-        if math.random() < CRATER_CHANCE and (i < landing_pad_start_index or i > landing_pad_end_index) then
-            local crater_size = math.random(MIN_CRATER_SIZE, MAX_CRATER_SIZE)
-            local crater_x = x + math.random(-SEGMENT_WIDTH/2, SEGMENT_WIDTH/2)
-            local crater_y = y - crater_size/2
-            
-            table.insert(self.craters, {
-                x = crater_x,
-                y = crater_y,
-                size = crater_size,
-                color = TERRAIN_COLORS[math.random(2, 3)]  -- Darker colors for craters
-            })
-        end
-    end
-    
-    -- Create segments from points
-    self:createSegments()
-end
-
----Creates line segments from the terrain points
-function Terrain:createSegments()
-    for i = 1, #self.points - 1 do
-        local x1, y1 = self.points[i].x, self.points[i].y
-        local x2, y2 = self.points[i+1].x, self.points[i+1].y
-        
-        -- Check if this segment is part of the landing pad
+---Generates terrain features (craters, rocks, etc.)
+function Terrain:generateFeatures()
+    -- Generate craters and rocks for each terrain point
+    for i, point in ipairs(self.points) do
+        -- Determine if this point is part of a landing pad
         local is_landing_pad = false
-        if x1 >= self.landing_pad_start and x2 <= self.landing_pad_end then
-            is_landing_pad = true
+        if self.landing_pad_start and self.landing_pad_end then
+            if point.x >= self.landing_pad_start and point.x <= self.landing_pad_end then
+                is_landing_pad = true
+            end
         end
-        
-        -- Create segment
-        local segment = {
-            x1 = x1,
-            y1 = y1,
-            x2 = x2,
-            y2 = y2,
-            is_landing_pad = is_landing_pad
-        }
-        
-        table.insert(self.segments, segment)
+
+        -- Generate crater
+        local crater = Features.generateCrater(point.x, point.y, is_landing_pad)
+        if crater then
+            table.insert(self.craters, crater)
+        end
+
+        -- Generate rock
+        local rock = Features.generateRock(point.x, point.y, is_landing_pad)
+        if rock then
+            table.insert(self.rocks, rock)
+        end
     end
 end
 
@@ -136,7 +120,7 @@ function Terrain:getHeightAt(x)
             return segment.y1 + t * (segment.y2 - segment.y1)
         end
     end
-    
+
     -- If we couldn't find a segment, return a default value
     return love.graphics.getHeight()
 end
@@ -148,104 +132,46 @@ function Terrain:isLandingPad(x)
     return x >= self.landing_pad_start and x <= self.landing_pad_end
 end
 
----Draws the terrain on the screen
-function Terrain:draw()
-    -- Draw the terrain outline
-    love.graphics.setColor(TERRAIN_COLORS[1])
-    
-    -- Draw the terrain fill with a gradient effect
-    for _, segment in ipairs(self.segments) do
-        -- Draw the line segment
-        love.graphics.setLineWidth(2)
-        love.graphics.line(segment.x1, segment.y1, segment.x2, segment.y2)
-        
-        -- Fill the area below the terrain with a gradient
-        local y_bottom = love.graphics.getHeight()
-        local gradient_steps = 10
-        local step_height = (y_bottom - segment.y1) / gradient_steps
-        
-        for i = 0, gradient_steps - 1 do
-            -- Gradually darken the color as we go down
-            local darkness_factor = 1 - (i / gradient_steps) * 0.5
-            local color = TERRAIN_COLORS[1]
-            love.graphics.setColor(
-                color[1] * darkness_factor,
-                color[2] * darkness_factor,
-                color[3] * darkness_factor
-            )
-            
-            local y1 = segment.y1 + i * step_height
-            local y2 = segment.y1 + (i + 1) * step_height
-            
-            love.graphics.polygon("fill", 
-                segment.x1, y1, 
-                segment.x2, y1, 
-                segment.x2, y2, 
-                segment.x1, y2
-            )
-        end
-    end
-    
-    -- Draw craters
-    for _, crater in ipairs(self.craters) do
-        love.graphics.setColor(crater.color)
-        love.graphics.circle("fill", crater.x, crater.y, crater.size)
-        
-        -- Draw crater rim (slightly lighter)
-        love.graphics.setColor(
-            crater.color[1] * 1.1,
-            crater.color[2] * 1.1,
-            crater.color[3] * 1.1
-        )
-        love.graphics.circle("line", crater.x, crater.y, crater.size)
-    end
-    
-    -- Draw the landing pad with a different color
-    if self.landing_pad_start and self.landing_pad_end then
-        -- Draw the landing pad platform
-        love.graphics.setColor(0.2, 0.6, 0.8)  -- Blue-ish color for landing pad
-        local pad_y = self.landing_pad_height
-        love.graphics.rectangle("fill", 
-            self.landing_pad_start, 
-            pad_y - 2, 
-            self.landing_pad_end - self.landing_pad_start, 
-            4
-        )
-        
-        -- Draw landing markers
-        love.graphics.setColor(1, 0.8, 0)  -- Amber color for markers
-        love.graphics.rectangle("fill", 
-            self.landing_pad_start + 5, 
-            pad_y - 6, 
-            5, 
-            8
-        )
-        love.graphics.rectangle("fill", 
-            self.landing_pad_end - 10, 
-            pad_y - 6, 
-            5, 
-            8
-        )
-        
-        -- Draw landing pad markings
-        local pad_width = self.landing_pad_end - self.landing_pad_start
-        local stripe_width = pad_width / 6
-        
-        for i = 0, 2 do
-            love.graphics.setColor(0.1, 0.1, 0.1)  -- Dark gray/black
-            love.graphics.rectangle("fill",
-                self.landing_pad_start + i * stripe_width * 2,
-                pad_y - 2,
-                stripe_width,
-                4
-            )
-        end
-        
-        -- Draw "LAND HERE" text
-        love.graphics.setColor(1, 1, 1)
-        local pad_center_x = (self.landing_pad_start + self.landing_pad_end) / 2
-        love.graphics.print("LAND HERE", pad_center_x - 30, pad_y - 25)
-    end
+---Updates the terrain
+---@param dt number Delta time
+function Terrain:update(dt)
+    -- Update starfield
+    self.starfield:update(dt)
+
+    -- Update dust particles
+    Sky.updateDustParticles(self.dust_particles, dt, function(x) return self:getHeightAt(x) end)
 end
 
-return Terrain 
+---Draws the terrain on the screen
+function Terrain:draw()
+    local screen_width = love.graphics.getWidth()
+    local screen_height = love.graphics.getHeight()
+
+    -- Clear the screen with a dark color to ensure stars are visible
+    love.graphics.clear(0.05, 0.05, 0.1)
+
+    -- Draw starfield (background)
+    self.starfield:draw()
+
+    -- Draw sky gradient with partial transparency to allow starfield to show through
+    love.graphics.setBlendMode("alpha", "alphamultiply")
+    Sky.drawSkyGradient(screen_width, screen_height, 0.6) -- Reduced transparency further
+    love.graphics.setBlendMode("alpha")                   -- Reset blend mode
+
+    -- Draw dust particles
+    Sky.drawDustParticles(self.dust_particles)
+
+    -- Draw the terrain surface
+    Surface.draw(self.segments)
+
+    -- Draw rocks
+    Features.drawRocks(self.rocks)
+
+    -- Draw craters
+    Features.drawCraters(self.craters)
+
+    -- Draw the landing pad
+    LandingPad.draw(self.landing_pad_start, self.landing_pad_end, self.landing_pad_height)
+end
+
+return Terrain
